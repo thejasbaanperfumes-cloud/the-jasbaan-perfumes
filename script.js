@@ -53,11 +53,11 @@ const PRODUCTS = [
     img: 'images/blue-lady.jpg', desc: 'A fragrance that defines you. Elegant, timeless and unforgettable. 50 ml eau de parfum.',
     tagline: 'A fragrance that defines you.', points: ['Long lasting fragrance', 'Premium quality essence', 'For every special moment'],
     lasting: 'Long lasting fragrance', season: '', occasion: '' },
-  { id: 'salaar', name: 'Salaar', cat: 'Signature', gender: 'Men', price: null, sale: null, notes: '', best: false,
+  { id: 'salaar', name: 'Salaar', cat: 'Signature', gender: 'Men', price: 1999, sale: null, notes: '', best: false,
     img: 'images/salaar.jpg', desc: 'A signature eau de parfum from Jasbaan. 50 ml eau de parfum.',
     tagline: 'Wear confidence.... Wear JASBAAN.', points: ['Signature fragrance', 'Eau de parfum'],
     lasting: '', season: '', occasion: '' },
-  { id: 'roma', name: 'Roma', cat: 'Floral', gender: 'Women', price: null, sale: null, notes: '', best: false,
+  { id: 'roma', name: 'Roma', cat: 'Floral', gender: 'Women', price: 1999, sale: null, notes: '', best: false,
     img: 'images/roma.jpg', desc: 'A floral eau de parfum from Jasbaan. Luxury in every spray. 50 ml eau de parfum.',
     tagline: 'Luxury in every spray.', points: ['Floral fragrance', 'Long lasting', 'Luxury in every spray'],
     lasting: 'Long lasting', season: '', occasion: '' }
@@ -65,7 +65,7 @@ const PRODUCTS = [
 /* ===== END EDIT ===== */
 
 /* true: every perfume has its own file (blue-sea.html and so on). The online preview sets this to false. */
-const MULTI = true;
+const MULTI = false;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const fmt = n => CONFIG.currency + ' ' + n.toLocaleString('en-PK');
@@ -293,7 +293,7 @@ $$('video[data-clone]').forEach(v => { const h = $('.himg'); v.poster = h.poster
     x.clearRect(0, 0, W, H);
     P.forEach(p => {
       p.y -= p.v; p.x += Math.sin(p.y / 60) * .15; if (p.y < -5) { p.y = H + 5; p.x = Math.random() * W; }
-      x.beginPath(); x.arc(p.x, p.y, p.r, 0, 6.283); x.fillStyle = 'rgba(212,175,90,' + p.a + ')'; x.fill();
+      x.beginPath(); x.arc(p.x, p.y, p.r, 0, 6.283); x.fillStyle = 'rgba(127,98,196,' + p.a + ')'; x.fill();
     });
     requestAnimationFrame(frame);
   })();
