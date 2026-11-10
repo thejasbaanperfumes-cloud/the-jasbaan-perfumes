@@ -1,14 +1,15 @@
 /* THE JASBAAN PERFUME: storefront logic (plain JavaScript, no framework). */
 
 /* ===== EDIT THESE ===== */
-const CONFIG = {
+const CONFIG = Object.assign({
   whatsapp: '923712272628',          // country code first, no + or spaces
   currency: 'PKR',
   deliveryFee: 300,                  // PLACEHOLDER: set your real delivery fee
-  payments: [{ label: 'Cash on Delivery' }], // add more methods here once you support them
+  payments: [{ label: 'Cash on Delivery', type: 'cod' }], // add more methods here once you support them
   storeKey: 'jasbaan-cart',
   orderUrl: ''                       // paste your Google Apps Script web app address here to save every order in a Google Sheet (see README)
-};
+}, window.STORE || {});
+CONFIG.payments = CONFIG.payments.filter(m => !m.type || m.type === 'cod' || m.account || m.details);
 
 /* Add a product: copy one block, give it a new id, name, price and image in the images folder.
    price is in rupees. Use price: null until the price is confirmed (the page then shows Price on WhatsApp). sale is optional.
@@ -146,29 +147,47 @@ function checkout() {
     <label>City<input name="city" required maxlength="60" autocomplete="address-level2"></label>
     <input class="hp" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
     <fieldset class="pay"><legend>Payment method</legend>${CONFIG.payments.map((m, i) => `<label><input type="radio" name="pay" value="${m.label}" ${i ? '' : 'checked'}> ${m.label}</label>`).join('')}</fieldset>
+    <div id="payinfo" class="fine"></div><label id="tidw" hidden>Transaction ID / reference<input name="tid" maxlength="40" autocomplete="off"></label>
     <div class="sum">${L.map(l => `<p><span>${l.p.name} × ${l.q}</span><span>${fmt(eff(l.p) * l.q)}</span></p>`).join('')}
     <p><span>Delivery fee (placeholder)</span><span>${fmt(fee)}</span></p><p><b>Total</b><b>${fmt(s + fee)}</b></p></div>
-    <button class="btn" type="submit">SEND ORDER ON WHATSAPP</button>
-    <p class="fine">This opens WhatsApp with your order details${CONFIG.orderUrl ? ' and saves your order with us' : ''}. Your order is not confirmed until we reply.</p></form>`);
+    <button class="btn" type="submit">PLACE ORDER</button>
+    <p class="fine">${CONFIG.orderUrl ? 'You pay on delivery. We will call you to confirm your order.' : 'Online ordering is not set up yet.'}</p></form>`);
+  const E = t => String(t == null ? '' : t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  const syncPay = () => {
+    const m = CONFIG.payments.find(x => x.label === new FormData($('#cf')).get('pay')), on = !!(m && m.type && m.type !== 'cod');
+    $('#tidw').hidden = !on; $('#cf').elements.tid.required = on;
+    $('#payinfo').innerHTML = on ? `Send <b>${fmt(s + fee)}</b> to ${E(m.label)}: <b>${E(m.account || m.details)}</b>${m.title ? ' (' + E(m.title) + ')' : ''}, then enter the transaction ID below.` : '';
+  };
+  $('#cf').addEventListener('change', syncPay); syncPay();
   $('#cf').onsubmit = e => {
     e.preventDefault();
     const d = new FormData(e.target);
     if (!L.length) return;
     const id = 'JB-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
+    const pmeth = CONFIG.payments.find(x => x.label === d.get('pay')), online = !!(pmeth && pmeth.type && pmeth.type !== 'cod');
     const order = { id, hp: String(d.get('hp') || ''), name: clean(d.get('name')), phone: clean(d.get('phone')), city: clean(d.get('city')),
-      addr: clean(d.get('addr')), pay: clean(d.get('pay')), fee, items: L.map(l => ({ id: l.p.id, name: l.p.name, qty: l.q, price: eff(l.p) })), subtotal: s, total: s + fee,
+      addr: clean(d.get('addr')), pay: clean(d.get('pay')), tid: clean(d.get('tid')), fee, items: L.map(l => ({ id: l.p.id, name: l.p.name, qty: l.q, price: eff(l.p) })), subtotal: s, total: s + fee, paid: online ? 'Pending' : 'Unpaid',
       source: document.referrer || "Direct visit", device: (innerWidth < 700 ? "Mobile" : "Desktop") + " | " + navigator.language + " | " + Intl.DateTimeFormat().resolvedOptions().timeZone };
     const msg = ['Hello Jasbaan, I would like to place an order:', `Order ID: ${id}`,
       ...L.map(l => `- ${l.p.name} x ${l.q}: ${fmt(eff(l.p) * l.q)}`),
       `Delivery fee: ${fmt(fee)}`, `Total: ${fmt(s + fee)}`, `Payment: ${order.pay}`,
       `Name: ${order.name}`, `Phone: ${order.phone}`, `Address: ${order.addr}, ${order.city}`].join('\n');
-    /* Open WhatsApp first (browsers block it if it waits), then save the order in the background. */
-    window.open('https://wa.me/' + CONFIG.whatsapp + '?text=' + encodeURIComponent(msg), '_blank', 'noopener,noreferrer');
-    if (CONFIG.orderUrl && !order.hp) {
-      fetch(CONFIG.orderUrl, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(order) }).catch(() => {});
-    }
-    cart = []; save(); drawCart();
-    $('#modal').close(); toast('Order request opened in WhatsApp. We confirm once we reply.');
+    if (!CONFIG.orderUrl) { toast('Online ordering is not set up yet. Please try again later.'); return; }
+    if (order.hp) return;
+    const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'PLACING ORDER...';
+    const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 20000);
+    fetch(CONFIG.orderUrl, { method: 'POST', mode: 'no-cors', signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(order) })
+      .then(() => {
+        clearTimeout(tm);
+        const rows = L.map(l => `<p><span>${E(l.p.name)} × ${l.q}</span><span>${fmt(eff(l.p) * l.q)}</span></p>`).join('');
+        cart = []; save(); drawCart();
+        modal(`<div class="f"><h2>Thank you, ${E(order.name)}!</h2><p>Your order <b>${id}</b> has been placed.</p>
+          <div class="sum">${rows}<p><span>Delivery fee</span><span>${fmt(fee)}</span></p><p><b>Total (${E(order.pay)})</b><b>${fmt(order.total)}</b></p></div>
+          ${online ? `<p class="fine">Payment: ${E(order.pay)}, reference ${E(order.tid)}. We will verify your payment and confirm your order.</p>` : ''}<p class="fine">Delivering to ${E(order.addr)}, ${E(order.city)}. We will call ${E(order.phone)} to confirm your order. Please keep your order number.</p>
+          <button class="btn" type="button" id="dn">CONTINUE SHOPPING</button></div>`);
+        $('#dn').onclick = () => $('#modal').close();
+      })
+      .catch(() => { clearTimeout(tm); btn.disabled = false; btn.textContent = 'PLACE ORDER'; toast('Order could not be sent. Check your internet and try again.'); });
   };
 }
 

@@ -37,3 +37,19 @@ FILES
 SECURITY
    Token aur admin key sirf aap ke browser mein save hoti hain. Token kisi ko na dein.
    Delivery fee abhi placeholder hai: script.js mein CONFIG.deliveryFee badlein.
+
+CHECKOUT (website par hi order)
+   orderUrl set hone par customer website par hi order place karta hai: "PLACE ORDER" dabate hi
+   order Google Sheet mein save hota hai aur screen par "Thank you" + order number + summary aata hai.
+   WhatsApp nahi khulta. Order admin.html ke Orders tab mein nazar aata hai.
+   Agar orderUrl khali ho to order na kho jaye is liye WhatsApp wala purana tareeqa chalta hai.
+
+ONLINE PAYMENT (Pakistan)
+   Checkout par Cash on Delivery ke saath Easypaisa / JazzCash / Bank Transfer aate hain.
+   admin.html > Settings > Website settings mein number, account title aur bank details bharein
+   (jis ki detail khali ho woh checkout par nahi aata) aur "Save to website" dabayein.
+   Customer paisay bhej kar Transaction ID likhta hai. Order mein payment "Pending" aata hai.
+   Aap apne account mein paisay dekh kar Orders > order > Payment status ko "Paid" kar dein.
+   Card se automatic payment ke liye gateway (Safepay, PayFast, JazzCash merchant) ka merchant account chahiye.
+
+NOTE: orderUrl set na ho to checkout "not set up yet" dikhata hai. Pehle step 2 (Google Sheet) zaroor karein.
