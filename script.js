@@ -159,8 +159,9 @@ function checkout() {
     $('#payinfo').innerHTML = on ? `Send <b>${fmt(s + fee)}</b> to ${E(m.label)}: <b>${E(m.account || m.details)}</b>${m.title ? ' (' + E(m.title) + ')' : ''}, then enter the transaction ID below.` : '';
   };
   $('#cf').addEventListener('change', syncPay); syncPay();
-  $('#cf').onsubmit = e => {
-    e.preventDefault();
+  const showErr = t => { let p = $('#oerr'); if (!p) { p = document.createElement('p'); p.id = 'oerr'; p.setAttribute('role', 'alert'); p.style.cssText = 'color:#b3261e;font-size:.85rem;margin:.6rem 0 0'; $('#cf').append(p); } p.textContent = t; };
+  $('#cf').onsubmit = e => { e.preventDefault(); try { place(e); } catch (ex) { showErr('Error: ' + (ex && ex.message)); } };
+  const place = e => {
     const d = new FormData(e.target);
     if (!L.length) return;
     const id = 'JB-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
@@ -172,7 +173,7 @@ function checkout() {
       ...L.map(l => `- ${l.p.name} x ${l.q}: ${fmt(eff(l.p) * l.q)}`),
       `Delivery fee: ${fmt(fee)}`, `Total: ${fmt(s + fee)}`, `Payment: ${order.pay}`,
       `Name: ${order.name}`, `Phone: ${order.phone}`, `Address: ${order.addr}, ${order.city}`].join('\n');
-    if (!CONFIG.orderUrl) { toast('Online ordering is not set up yet. Please try again later.'); return; }
+    if (!CONFIG.orderUrl) { showErr('Online ordering is not set up yet. Please try again later.'); return; }
     if (order.hp) return;
     const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'PLACING ORDER...';
     const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 20000);
@@ -187,7 +188,7 @@ function checkout() {
           <button class="btn" type="button" id="dn">CONTINUE SHOPPING</button></div>`);
         $('#dn').onclick = () => $('#modal').close();
       })
-      .catch(() => { clearTimeout(tm); btn.disabled = false; btn.textContent = 'PLACE ORDER'; toast('Order could not be sent. Check your internet and try again.'); });
+      .catch(err => { clearTimeout(tm); btn.disabled = false; btn.textContent = 'PLACE ORDER'; showErr('Order could not be sent (' + ((err && err.name) || 'error') + ': ' + ((err && err.message) || '') + '). Please try again.'); });
   };
 }
 
