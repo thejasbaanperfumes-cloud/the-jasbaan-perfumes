@@ -166,7 +166,7 @@ function checkout() {
     if (!L.length) return;
     const id = 'JB-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
     const pmeth = CONFIG.payments.find(x => x.label === d.get('pay')), online = !!(pmeth && pmeth.type && pmeth.type !== 'cod');
-    const order = { id, hp: '',, name: clean(d.get('name')), phone: clean(d.get('phone')), city: clean(d.get('city')),
+    const order = { id, hp: '', name: clean(d.get('name')), phone: clean(d.get('phone')), city: clean(d.get('city')),
       addr: clean(d.get('addr')), pay: clean(d.get('pay')), tid: clean(d.get('tid')), fee, items: L.map(l => ({ id: l.p.id, name: l.p.name, qty: l.q, price: eff(l.p) })), subtotal: s, total: s + fee, paid: online ? 'Pending' : 'Unpaid',
       source: document.referrer || "Direct visit", device: (innerWidth < 700 ? "Mobile" : "Desktop") + " | " + navigator.language + " | " + Intl.DateTimeFormat().resolvedOptions().timeZone };
     const msg = ['Hello Jasbaan, I would like to place an order:', `Order ID: ${id}`,
