@@ -1,64 +1,36 @@
-JASBAAN STORE - setup (Roman Urdu)
+THE JASBAAN PERFUME: WEBSITE FILES
+==================================
+Files: index.html and one page per perfume (blue-sea.html, nayel.html ...), style.css (look), script.js (shop logic), images/, videos/, sitemap.xml, robots.txt, _headers.
 
-FILES
-  index.html, script.js   website
-  products.js             saare products ka data (admin.html isay khud edit karta hai)
-  admin.html              admin panel: products + orders (isay kisi ko link na dein)
-  apps-script/Code.gs     orders ka backend (Google Sheet)
-  images/, videos/        media
+OPEN IT
+Unzip into one folder (keep everything together) and double-click index.html.
 
-1) GITHUB PAR UPLOAD
-   Naya repo banayein, zip ki saari files upload karein.
-   Settings > Pages > Deploy from branch > main > / (root). Site ka link mil jayega.
-   Admin panel: https://USERNAME.github.io/REPO/admin.html
+EDIT (script.js, top of the file)
+- CONFIG: WhatsApp number, delivery fee (placeholder), payment methods, orderUrl (see Google Sheet below).
+- PRODUCTS: name, price, gender (Men, Women, Unisex), photos, tagline, highlights, lasting, notes, season, occasion. Empty fields are hidden. price: null shows "Price on WhatsApp".
+- ADS: each ad video shows on the page of its own perfume. THEMES: colour and animation of each perfume page. QUOTES: the quotes in the top bar.
+- Banner at the top: the <section class="banner"> block in index.html. Pictures: images/banner-lineup.jpg (all bottles) and images/banner-man.jpg.
+- Colours: first lines of style.css.
 
-2) ORDERS (Google Sheet)
-   a) sheets.new se nayi sheet banayein > Extensions > Apps Script.
-   b) Code.gs ka content paste karein. ADMIN_KEY mein apna lamba secret likhein. Save.
-   c) Deploy > New deployment > type: Web app > Execute as: Me > Who has access: Anyone > Deploy.
-      Google permission maangay to Allow karein. "Web app URL" copy karein.
-   d) script.js ke upar CONFIG mein  orderUrl: 'WEB-APP-URL'  paste karein aur GitHub par commit karein.
-   Ab har order sheet mein save hoga (naam, phone, address, city, items, total, kahan se aaya, device).
-   Code.gs badalne par Deploy > Manage deployments > Edit > New version karna parta hai.
+GOOGLE AND SEARCH
+1. After hosting, replace YOUR-DOMAIN with your real web address in every .html file, sitemap.xml and robots.txt.
+2. Google Search Console: add the site, verify it, then submit sitemap.xml.
+3. Google Business Profile: category Perfume store, your Karachi address or service area, then add your website link.
+4. Put the website link in your Instagram bio.
+5. If you edit notes or lasting in script.js, also update the description in that perfume's .html file (or ask for the files to be regenerated).
 
-3) PRODUCT EDITING (bina code ke)
-   a) GitHub > Settings > Developer settings > Fine-grained tokens > Generate.
-      Sirf is repo ko select karein, Permissions > Contents: Read and write.
-   b) admin.html kholein > Settings: repo (username/repo), token, Orders URL, Admin key, store name/phone > Save.
-   c) Products tab: Add / Edit / photo upload / price / delete / order change.
-      Save ke 1-2 minute baad website update ho jati hai.
-
-4) ORDERS MANAGEMENT
-   Orders tab: aaj ke orders, pending, total sales, search, status (New > Confirmed > Shipped > Delivered / Cancelled).
-   Order kholein: customer, WhatsApp button, items, kahan se order aaya.
-   Print invoice (order summary) aur Print parcel label (COD amount ke saath).
-   "Print labels" button New + Confirmed sab orders ke labels ek saath nikalta hai.
+ORDERS SAVED IN A GOOGLE SHEET (optional)
+Orders always go to WhatsApp. To also save each order in a Google Sheet and email it to you: create a Google Sheet, open Extensions then Apps Script, paste the file Code.gs (keep it off your website host), Deploy as Web app (Execute as Me, access Anyone), copy the address into orderUrl in script.js, and place a test order. When prices change, change them in Code.gs too and deploy a new version.
 
 SECURITY
-   Token aur admin key sirf aap ke browser mein save hoti hain. Token kisi ko na dein.
-   Delivery fee abhi placeholder hai: script.js mein CONFIG.deliveryFee badlein.
+Every page has a Content-Security-Policy, and _headers adds strong headers (Netlify and Cloudflare Pages read it, keep it next to index.html). Customer input is length-limited, cleaned and never put into the page as HTML. Host on https only, never put passwords or secret keys in any file, and use strong passwords with 2-step verification on your Google, Instagram and hosting accounts.
 
-CHECKOUT (website par hi order)
-   orderUrl set hone par customer website par hi order place karta hai: "PLACE ORDER" dabate hi
-   order Google Sheet mein save hota hai aur screen par "Thank you" + order number + summary aata hai.
-   WhatsApp nahi khulta. Order admin.html ke Orders tab mein nazar aata hai.
-   Agar orderUrl khali ho to order na kho jaye is liye WhatsApp wala purana tareeqa chalta hai.
-
-ONLINE PAYMENT (Pakistan)
-   Checkout par Cash on Delivery ke saath Easypaisa / JazzCash / Bank Transfer aate hain.
-   admin.html > Settings > Website settings mein number, account title aur bank details bharein
-   (jis ki detail khali ho woh checkout par nahi aata) aur "Save to website" dabayein.
-   Customer paisay bhej kar Transaction ID likhta hai. Order mein payment "Pending" aata hai.
-   Aap apne account mein paisay dekh kar Orders > order > Payment status ko "Paid" kar dein.
-   Card se automatic payment ke liye gateway (Safepay, PayFast, JazzCash merchant) ka merchant account chahiye.
-
-NOTE: orderUrl set na ho to checkout "not set up yet" dikhata hai. Pehle step 2 (Google Sheet) zaroor karein.
-
-==== VERCEL BACKEND (nayi, Google Sheet ki zaroorat nahi) ====
-api/order.js  : customer ka order website par hi save karta hai
-api/admin.js  : admin.html ke liye orders list / status / payment (ADMIN_KEY se mehfooz)
-Setup (Vercel dashboard):
- 1) Project kholein > Storage tab > Create Database > Upstash > Redis (Free) > Connect to project.
- 2) Project > Settings > Environment Variables > naam ADMIN_KEY, value apna secret (sirf english letters/numbers) > Save.
- 3) Deployments > latest > ... > Redeploy.
- 4) admin.html > Settings: Admin key (wohi ADMIN_KEY), Orders URL KHALI chhor dein.
+LAUNCH CHECKLIST
+[ ] Delivery fee and policies (FAQ items marked [To be confirmed])
+[ ] Price and photos for Salaar and Roma
+[ ] Fragrance notes and how long each lasts, only if confirmed
+[ ] Real customer reviews to replace the sample ones
+[ ] Business address
+[ ] Right to use the product names, including Gucci Flora (another company's trademark)
+[ ] Check the name: Admire or Almira
+[ ] Domain and hosting
