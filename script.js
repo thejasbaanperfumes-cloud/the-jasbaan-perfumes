@@ -145,7 +145,7 @@ function checkout() {
     <label>Phone number<input name="phone" type="tel" required pattern="[0-9+ ]{10,15}" maxlength="15" title="Digits only, 10 to 15 characters" autocomplete="tel"></label>
     <label>Delivery address<textarea name="addr" rows="2" required maxlength="300" autocomplete="street-address"></textarea></label>
     <label>City<input name="city" required maxlength="60" autocomplete="address-level2"></label>
-   <input class="hp" name="zq_trap" type="text" tabindex="-1" autocomplete="new-password" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+    <input class="hp" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
     <fieldset class="pay"><legend>Payment method</legend>${CONFIG.payments.map((m, i) => `<label><input type="radio" name="pay" value="${m.label}" ${i ? '' : 'checked'}> ${m.label}</label>`).join('')}</fieldset>
     <div id="payinfo" class="fine"></div><label id="tidw" hidden>Transaction ID / reference<input name="tid" maxlength="40" autocomplete="off"></label>
     <div class="sum">${L.map(l => `<p><span>${l.p.name} × ${l.q}</span><span>${fmt(eff(l.p) * l.q)}</span></p>`).join('')}
@@ -166,7 +166,7 @@ function checkout() {
     if (!L.length) return;
     const id = 'JB-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 5).toUpperCase();
     const pmeth = CONFIG.payments.find(x => x.label === d.get('pay')), online = !!(pmeth && pmeth.type && pmeth.type !== 'cod');
-    const order = { id, hp: String(d.get('zq_trap') || '') || ''), name: clean(d.get('name')), phone: clean(d.get('phone')), city: clean(d.get('city')),
+    const order = { id, hp: String(d.get('hp') || ''), name: clean(d.get('name')), phone: clean(d.get('phone')), city: clean(d.get('city')),
       addr: clean(d.get('addr')), pay: clean(d.get('pay')), tid: clean(d.get('tid')), fee, items: L.map(l => ({ id: l.p.id, name: l.p.name, qty: l.q, price: eff(l.p) })), subtotal: s, total: s + fee, paid: online ? 'Pending' : 'Unpaid',
       source: document.referrer || "Direct visit", device: (innerWidth < 700 ? "Mobile" : "Desktop") + " | " + navigator.language + " | " + Intl.DateTimeFormat().resolvedOptions().timeZone };
     const msg = ['Hello Jasbaan, I would like to place an order:', `Order ID: ${id}`,
