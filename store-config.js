@@ -1,5 +1,5 @@
 /* Store settings. Edit through admin.html > Settings > Website settings (or by hand, keep valid JSON). */
-window.STORE = {"orderUrl":"https://script.google.com/macros/s/AKfycbyuqwCm7novdS19VgcfGuX9dj2KhRaGI6pPIfcQnevVQ94tu-AS3jN8AQTgvKyDJJRo/exec","deliveryFee":300,"whatsapp":"923712272628","payments":[
+window.STORE = {"orderUrl":"/api/order","deliveryFee":300,"whatsapp":"923712272628","payments":[
  {"label":"Cash on Delivery","type":"cod"},
  {"label":"Easypaisa","type":"easypaisa","account":"","title":""},
  {"label":"JazzCash","type":"jazzcash","account":"","title":""},

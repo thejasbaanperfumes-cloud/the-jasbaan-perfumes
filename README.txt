@@ -53,3 +53,12 @@ ONLINE PAYMENT (Pakistan)
    Card se automatic payment ke liye gateway (Safepay, PayFast, JazzCash merchant) ka merchant account chahiye.
 
 NOTE: orderUrl set na ho to checkout "not set up yet" dikhata hai. Pehle step 2 (Google Sheet) zaroor karein.
+
+==== VERCEL BACKEND (nayi, Google Sheet ki zaroorat nahi) ====
+api/order.js  : customer ka order website par hi save karta hai
+api/admin.js  : admin.html ke liye orders list / status / payment (ADMIN_KEY se mehfooz)
+Setup (Vercel dashboard):
+ 1) Project kholein > Storage tab > Create Database > Upstash > Redis (Free) > Connect to project.
+ 2) Project > Settings > Environment Variables > naam ADMIN_KEY, value apna secret (sirf english letters/numbers) > Save.
+ 3) Deployments > latest > ... > Redeploy.
+ 4) admin.html > Settings: Admin key (wohi ADMIN_KEY), Orders URL KHALI chhor dein.

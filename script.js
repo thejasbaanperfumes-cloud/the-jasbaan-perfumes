@@ -159,7 +159,7 @@ function checkout() {
     $('#payinfo').innerHTML = on ? `Send <b>${fmt(s + fee)}</b> to ${E(m.label)}: <b>${E(m.account || m.details)}</b>${m.title ? ' (' + E(m.title) + ')' : ''}, then enter the transaction ID below.` : '';
   };
   $('#cf').addEventListener('change', syncPay); syncPay();
-  const showErr = t => { let p = $('#oerr'); if (!p) { p = document.createElement('p'); p.id = 'oerr'; p.setAttribute('role', 'alert'); p.style.cssText = 'color:#b3261e;font-size:.85rem;margin:.6rem 0 0'; $('#cf').append(p); } p.textContent = t; };
+  const showErr = t => { let p = $('#oerr'); if (!p) { p = document.createElement('p'); p.id = 'oerr'; p.setAttribute('role', 'alert'); p.style.cssText = 'color:#b3261e;font-weight:600;font-size:.9rem;margin:.6rem 0'; const b = $('#cf button[type=submit]'); b.parentNode.insertBefore(p, b); } p.textContent = t; p.scrollIntoView({ block: 'center' }); };
   $('#cf').onsubmit = e => { e.preventDefault(); try { place(e); } catch (ex) { showErr('Error: ' + (ex && ex.message)); } };
   const place = e => {
     const d = new FormData(e.target);
@@ -174,11 +174,14 @@ function checkout() {
       `Delivery fee: ${fmt(fee)}`, `Total: ${fmt(s + fee)}`, `Payment: ${order.pay}`,
       `Name: ${order.name}`, `Phone: ${order.phone}`, `Address: ${order.addr}, ${order.city}`].join('\n');
     if (!CONFIG.orderUrl) { showErr('Online ordering is not set up yet. Please try again later.'); return; }
-    if (order.hp) return;
+    if (order.hp) { showErr('Please clear the hidden field or refresh the page and try again.'); return; }
     const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true; btn.textContent = 'PLACING ORDER...';
+    const same = CONFIG.orderUrl.charAt(0) === '/';
     const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 20000);
-    fetch(CONFIG.orderUrl, { method: 'POST', mode: 'no-cors', signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(order) })
-      .then(() => {
+    fetch(CONFIG.orderUrl, same ? { method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(order) }
+        : { method: 'POST', mode: 'no-cors', signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(order) })
+      .then(r => {
+        if (r && same && !r.ok) throw new Error('Server ' + r.status);
         clearTimeout(tm);
         const rows = L.map(l => `<p><span>${E(l.p.name)} × ${l.q}</span><span>${fmt(eff(l.p) * l.q)}</span></p>`).join('');
         cart = []; save(); drawCart();
