@@ -27,10 +27,13 @@ const STAT=['New','Confirmed','Shipped','Delivered','Cancelled'];let P=[],sha=''
 /* ---------- GitHub (products) ---------- */
 const b64=s=>btoa(unescape(encodeURIComponent(s))),unb64=s=>decodeURIComponent(escape(atob(s.replace(/\n/g,''))));
 const gh=async(path,opt={})=>{if(!S.repo||!S.token)throw Error('Settings mein GitHub repo aur token daalein');
- const r=await fetch(`https://api.github.com/repos/${S.repo}/contents/${path}`+(opt.method?'':`?ref=${S.branch}`),{...opt,headers:{Authorization:'Bearer '+S.token,Accept:'application/vnd.github+json'}});
- const j=await r.json();if(!r.ok)throw Error(j.message||r.status);return j};
+ const repo=S.repo.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//i,'').replace(/\.git$/,'').replace(/^\/+|\/+$/g,''),br=(S.branch||'main').trim()||'main';let r;
+ try{r=await fetch(`https://api.github.com/repos/${repo}/contents/${path}`+(opt.method?'':`?ref=${encodeURIComponent(br)}`),{...opt,headers:{Authorization:'Bearer '+S.token.trim(),Accept:'application/vnd.github+json'}})}
+ catch(e){throw Error('Browser GitHub (api.github.com) tak pahunch nahi paya ('+e.message+'). Internet, VPN ya ad-blocker check karein. Naye tab mein https://api.github.com khol kar dekhein ke khulta hai ya nahi.')}
+ const j=await r.json().catch(()=>({}));
+ if(!r.ok)throw Error((j.message||'Error '+r.status)+(r.status===401?' | Token galat ya expire hai, naya token banayein.':r.status===404?' | Repo ka naam "'+repo+'" galat hai, ya branch "'+br+'" galat hai, ya token ko is repo ki Contents (Read and write) permission nahi mili.':r.status===403?' | Token ko Contents: Read and write permission chahiye.':''));return j};
 const loadP=async()=>{const r=await gh('products.js'),t=unb64(r.content);sha=r.sha;P=JSON.parse(t.slice(t.indexOf('['),t.lastIndexOf(']')+1))};
-const saveP=async msg=>{const r=await gh('products.js',{method:'PUT',body:JSON.stringify({message:msg,branch:S.branch,sha,
+const saveP=async msg=>{const r=await gh('products.js',{method:'PUT',body:JSON.stringify({message:msg,branch:(S.branch||'main').trim()||'main',sha,
  content:b64('/* Product data. Edit through admin.html (or by hand: keep valid JSON). */\nconst PRODUCTS = '+JSON.stringify(P,null,1)+';\n')})});sha=r.content.sha;toast('Saved. Site 1-2 minute mein update ho jayegi.')};
 /* ---------- Products ---------- */
 const F=[['name','Name'],['id','ID (link, no spaces)'],['cat','Category'],['gender','Gender','Men,Women,Unisex'],['price','Price PKR (empty = Price on WhatsApp)','n'],['sale','Sale price (optional)','n'],['tag','Badge text (e.g. Launch offer)'],['size','Size'],['tagline','Tagline'],['lasting','Lasting'],['season','Season'],['occasion','Occasion']];
@@ -50,7 +53,7 @@ const editP=i=>{const p=i<0?{img:'',best:false,points:[]}:P[i];$('#dlg').innerHT
    if(P.some((x,j)=>x.id===n.id&&j!==i))throw Error('Ye ID pehle se maujood hai');
    for(const [f,k] of [['f1','img'],['f2','img2']]){const file=d.get(f);if(file&&file.size){const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,''),path=`images/${n.id}${k==='img2'?'-2':''}-${Date.now()}.${ext}`;
      const data=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(file)});
-     await gh(path,{method:'PUT',body:JSON.stringify({message:'Upload '+path,branch:S.branch,content:data})});n[k]=path}}
+     await gh(path,{method:'PUT',body:JSON.stringify({message:'Upload '+path,branch:(S.branch||'main').trim()||'main',content:data})});n[k]=path}}
    if(i<0)P.unshift(n);else P[i]=n;await saveP((i<0?'Add ':'Update ')+n.name);$('#dlg').close();viewP()}catch(er){toast(er.message)}}};
 const delP=async i=>{if(!confirm('Delete '+P[i].name+'?'))return;const n=P[i].name;P.splice(i,1);try{await saveP('Delete '+n);$('#dlg').close();viewP()}catch(e){toast(e.message)}};
 /* ---------- Orders ---------- */
@@ -124,7 +127,7 @@ const siteS=async()=>{const el=document.createElement('div');el.innerHTML='<h3 s
  const f=[['orderUrl','Orders URL (Vercel: /api/order)',C.orderUrl],['deliveryFee','Delivery fee PKR',C.deliveryFee],['whatsapp','WhatsApp number (923...)',C.whatsapp],['ep','Easypaisa number',pm('easypaisa').account],['ept','Easypaisa account title',pm('easypaisa').title],['jc','JazzCash number',pm('jazzcash').account],['jct','JazzCash account title',pm('jazzcash').title],['bk','Bank transfer details (bank, IBAN, title)',pm('bank').details]];
  el.innerHTML='<h3 style="color:var(--gold);margin-top:2rem">Website settings (GitHub par save hoti hain)</h3><p><small>Jis method ka number/detail khali ho woh checkout par nahi aata.</small></p><form id="wf">'+f.map(([k,l,v])=>`<label>${l}</label><input name="${k}" value="${esc(v||'')}">`).join('')+'<p><button>Save to website</button></p></form>';
  $('#wf').onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),n={orderUrl:d.orderUrl.trim(),deliveryFee:+d.deliveryFee||0,whatsapp:d.whatsapp.trim(),payments:[{label:'Cash on Delivery',type:'cod'},{label:'Easypaisa',type:'easypaisa',account:d.ep.trim(),title:d.ept.trim()},{label:'JazzCash',type:'jazzcash',account:d.jc.trim(),title:d.jct.trim()},{label:'Bank Transfer',type:'bank',details:d.bk.trim()}]};
-  try{const r=await gh('store-config.js',{method:'PUT',body:JSON.stringify({message:'Update store settings',branch:S.branch,...(ss?{sha:ss}:{}),content:b64('/* Store settings. Edit through admin.html > Settings > Website settings. */\nwindow.STORE = '+JSON.stringify(n,null,1)+';\n')})});ss=r.content.sha;S.orderUrl=n.orderUrl||S.orderUrl;persist();toast('Saved. Site 1-2 minute mein update ho jayegi.')}catch(er){toast(er.message)}}};
+  try{const r=await gh('store-config.js',{method:'PUT',body:JSON.stringify({message:'Update store settings',branch:(S.branch||'main').trim()||'main',...(ss?{sha:ss}:{}),content:b64('/* Store settings. Edit through admin.html > Settings > Website settings. */\nwindow.STORE = '+JSON.stringify(n,null,1)+';\n')})});ss=r.content.sha;S.orderUrl=n.orderUrl||S.orderUrl;persist();toast('Saved. Site 1-2 minute mein update ho jayegi.')}catch(er){toast(er.message)}}};
 const go=t=>{tab=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));({orders:viewO,products:viewP,settings:viewS})[t]()};
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>go(b.dataset.t));go(S.key?'orders':'settings');
 </script></body></html>
