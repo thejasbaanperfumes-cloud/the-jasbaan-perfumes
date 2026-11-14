@@ -185,15 +185,78 @@ function checkout() {
         clearTimeout(tm);
         const rows = L.map(l => `<p><span>${E(l.p.name)} × ${l.q}</span><span>${fmt(eff(l.p) * l.q)}</span></p>`).join('');
         cart = []; save(); drawCart();
+        try { localStorage.setItem('jb-last', JSON.stringify({ id, phone: order.phone })); } catch (x) {}
         modal(`<div class="f"><h2>Thank you, ${E(order.name)}!</h2><p>Your order <b>${id}</b> has been placed.</p>
           <div class="sum">${rows}<p><span>Delivery fee</span><span>${fmt(fee)}</span></p><p><b>Total (${E(order.pay)})</b><b>${fmt(order.total)}</b></p></div>
           ${online ? `<p class="fine">Payment: ${E(order.pay)}, reference ${E(order.tid)}. We will verify your payment and confirm your order.</p>` : ''}<p class="fine">Delivering to ${E(order.addr)}, ${E(order.city)}. We will call ${E(order.phone)} to confirm your order. Please keep your order number.</p>
-          <button class="btn" type="button" id="dn">CONTINUE SHOPPING</button></div>`);
-        $('#dn').onclick = () => $('#modal').close();
+          <button class="btn" type="button" id="dn">CONTINUE SHOPPING</button> <button class="btn ghost" type="button" id="tk">TRACK / CANCEL ORDER</button></div>`);
+        $('#dn').onclick = () => $('#modal').close(); $('#tk').onclick = () => openTrack(id);
       })
       .catch(err => { clearTimeout(tm); btn.disabled = false; btn.textContent = 'PLACE ORDER'; showErr('Order could not be sent (' + ((err && err.name) || 'error') + ': ' + ((err && err.message) || '') + '). Please try again.'); });
   };
 }
+
+/* Order tracking and cancellation (customer side) */
+const TRK = { New: 'Order received', Confirmed: 'Confirmed', Shipped: 'Shipped', Delivered: 'Delivered', Cancelled: 'Cancelled' };
+const tEsc = v => String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+const tWhen = v => { const d = new Date(v); return isNaN(d) ? '' : d.toLocaleString('en-PK', { dateStyle: 'medium', timeStyle: 'short' }); };
+const tCall = async payload => {
+  if (!CONFIG.orderUrl) throw new Error('Order tracking is not set up yet.');
+  const same = CONFIG.orderUrl.charAt(0) === '/', ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 20000);
+  try {
+    const r = same ? await fetch(CONFIG.orderUrl.replace(/\/order$/, '/track'), { method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      : await fetch(CONFIG.orderUrl + (CONFIG.orderUrl.indexOf('?') < 0 ? '?' : '&') + new URLSearchParams(payload), { signal: ctl.signal });
+    const j = await r.json().catch(() => ({}));
+    if (!j.ok) throw new Error(j.error || 'Could not reach the store. Please try again.');
+    return j;
+  } catch (e) { throw e.name === 'AbortError' ? new Error('The request timed out. Please try again.') : e; } finally { clearTimeout(tm); }
+};
+function openTrack(prefId) {
+  let last = {}; try { last = JSON.parse(localStorage.getItem('jb-last')) || {}; } catch (e) {}
+  modal(`<form class="f" id="tf"><h2>Track your order</h2><p class="fine">Enter your order number and the phone number you used when ordering.</p>
+    <label>Order number<input name="id" required maxlength="40" value="${tEsc(prefId || last.id || '')}" placeholder="JB-XXXXXXXX" autocomplete="off"></label>
+    <label>Phone number<input name="phone" type="tel" required pattern="[0-9+ ]{10,15}" maxlength="15" value="${tEsc(last.phone || '')}" placeholder="03XX XXXXXXX"></label>
+    <p id="tmsg" role="alert" style="color:#b3261e;font-weight:600;font-size:.9rem;margin:0"></p>
+    <button class="btn" type="submit">TRACK ORDER</button></form>`);
+  $('#tf').onsubmit = async e => {
+    e.preventDefault(); const d = new FormData(e.target), btn = e.target.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = 'CHECKING...'; $('#tmsg').textContent = '';
+    try { const r = await tCall({ action: 'track', id: d.get('id'), phone: d.get('phone') }); showTrack(r.order, d.get('phone')); }
+    catch (er) { $('#tmsg').textContent = er.message; btn.disabled = false; btn.textContent = 'TRACK ORDER'; }
+  };
+}
+function showTrack(o, phone, msg) {
+  const wa = ($('footer a[href^="https://wa.me/"]') || {}).href || '#';
+  const steps = (o.history || []).map(h => `<p><span>${tEsc(TRK[h.s] || h.s)}</span><span>${tEsc(tWhen(h.at))}</span></p>`).join('');
+  const rows = (o.items || []).map(i => `<p><span>${tEsc(i.name)} × ${tEsc(i.qty)}</span><span>${fmt(i.price * i.qty)}</span></p>`).join('');
+  const pay = o.paid === 'Paid' ? 'Paid' : o.paid === 'Pending' ? 'Payment is being verified' : o.pay === 'Cash on Delivery' ? 'Pay on delivery' : 'Payment not received yet';
+  const after = o.canCancel ? '<button class="btn ghost" type="button" id="tc">CANCEL THIS ORDER</button>'
+    : o.status === 'Cancelled' ? '<p class="fine">This order is cancelled.</p>'
+    : `<p class="fine">This order can no longer be cancelled here. To change or cancel it, please <a href="${tEsc(wa)}" target="_blank" rel="noopener noreferrer" style="color:var(--gold)">contact us on WhatsApp</a>.</p>`;
+  modal(`<div class="f"><h2>Order ${tEsc(o.id)}</h2>${msg ? `<p style="color:var(--gold);font-weight:600">${tEsc(msg)}</p>` : ''}
+    <p>Status: <b>${tEsc(TRK[o.status] || o.status)}</b></p>
+    ${o.track ? `<p>Courier: <b>${tEsc(o.courier || 'Courier')}</b><br>Tracking number: <b>${tEsc(o.track)}</b></p>` : o.status === 'Shipped' ? '<p class="fine">Your parcel is on its way. The tracking number will show here once we add it.</p>' : ''}
+    <div class="sum">${steps}</div>
+    <div class="sum">${rows}<p><span>Delivery fee</span><span>${fmt(o.fee || 0)}</span></p><p><b>Total (${tEsc(o.pay)})</b><b>${fmt(o.total || 0)}</b></p></div>
+    <p class="fine">${tEsc(pay)}</p><div id="tact">${after}</div></div>`);
+  const tc = $('#tc'); if (!tc) return;
+  tc.onclick = () => {
+    $('#tact').innerHTML = `<label>Reason for cancelling (optional)<select id="trs"><option value="">Choose a reason</option><option>Changed my mind</option><option>Ordered by mistake</option><option>Found a better price</option><option>Delivery is too slow</option><option>Other</option></select></label>
+      ${o.paid === 'Paid' || o.paid === 'Pending' ? '<p class="fine">If you have already paid, we will contact you about your refund.</p>' : ''}
+      <p id="tmsg" role="alert" style="color:#b3261e;font-weight:600;font-size:.9rem;margin:.4rem 0"></p>
+      <button class="btn" type="button" id="tyes">YES, CANCEL MY ORDER</button> <button class="btn ghost" type="button" id="tno">KEEP MY ORDER</button>`;
+    $('#tno').onclick = () => showTrack(o, phone);
+    $('#tyes').onclick = async () => {
+      const b = $('#tyes'); b.disabled = true; b.textContent = 'CANCELLING...';
+      try { const r = await tCall({ action: 'cancel', id: o.id, phone, reason: $('#trs').value }); showTrack(r.order, phone, 'Your order has been cancelled.'); }
+      catch (er) { $('#tmsg').textContent = er.message; b.disabled = false; b.textContent = 'YES, CANCEL MY ORDER'; }
+    };
+  };
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-track]')) { e.preventDefault(); openTrack(); } });
+const trackHash = () => { const m = location.hash.match(/^#track(?:-(.+))?$/i); if (m) openTrack(m[1] ? decodeURIComponent(m[1]).slice(0, 40) : ''); };
+addEventListener('hashchange', trackHash); trackHash();
+$('#modal').addEventListener('close', () => { if (/^#track/i.test(location.hash)) history.replaceState(null, '', location.pathname + location.search); });
 
 /* Clicks (one handler for all buttons) */
 document.addEventListener('click', e => {

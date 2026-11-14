@@ -75,7 +75,7 @@ const drawO=(f=fS,q=fQ,r=fR)=>{fS=f;fQ=q;fR=r;const td=new Date().toDateString()
  document.querySelectorAll('tr.c').forEach(t=>t.onclick=()=>det(t.dataset.id));$('#q').focus();$('#q').setSelectionRange(q.length,q.length)};
 const det=id=>{const o=O.find(x=>x.id===id);if(!o)return toast('Order nahi mila, Refresh karein');const ph=String(o.phone).replace(/\D/g,'').replace(/^0/,'92'),wa=t=>'https://wa.me/'+ph+'?text='+encodeURIComponent(t),its=o.items.map(i=>i.name+' x '+i.qty).join(', '),
  w1=wa(`Assalam o Alaikum ${o.name}, ${S.storeName} se aap ka order ${o.id} receive ho gaya hai.\n${its}\nTotal: ${pkr(o.total)} (${o.pay}).\nKya aap order confirm karte hain?`),
- w2=wa(`Assalam o Alaikum ${o.name}, aap ka order ${o.id} dispatch ho gaya hai.`+(o.track?`\nCourier: ${o.courier||'-'}\nTracking: ${o.track}`:'')+`\nShukriya, ${S.storeName}.`),
+ w2=wa(`Assalam o Alaikum ${o.name}, aap ka order ${o.id} dispatch ho gaya hai.`+(o.track?`\nCourier: ${o.courier||'-'}\nTracking: ${o.track}`:'')+`\nOrder track ya cancel karne ke liye: ${location.origin}/#track-${o.id}\nShukriya, ${S.storeName}.`),
  hist=(o.history||[]).map(h=>`${esc(h.s)} <small>(${dt(h.at)})</small>`).join(' &rarr; ');
  $('#dlg').innerHTML=`<h3>${esc(o.id)} <span class=badge>${esc(o.status)}</span></h3><small>${dt(o.date)}</small>
  <p><b>${esc(o.name)}</b> | <a style="color:var(--gold)" href="tel:${esc(o.phone)}">${esc(o.phone)}</a> | <a style="color:var(--gold)" target=_blank rel=noopener href="https://wa.me/${esc(ph)}">WhatsApp</a><br>${esc(o.addr)}, ${esc(o.city)}</p>

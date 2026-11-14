@@ -40,6 +40,11 @@ FILES
    Server ab prices, delivery fee aur payment method khud site ki files (products.js, store-config.js) se nikalta hai,
    customer ke browser ke bheje hue daam par bharosa nahi karta.
 
+   Customer track / cancel: site ke footer mein "Track Order" (ya link site.com/#track-ORDERID). Customer order number + phone
+   daalta hai, status, courier aur tracking number dekhta hai. Order New ya Confirmed ho to khud cancel kar sakta hai
+   (Shipped ke baad nahi, WhatsApp par rabta karna hota hai). Cancel hone par admin mein status Cancelled aur note
+   "Cancelled by customer: wajah" nazar aata hai. Vercel ke liye api/track.js, Google Sheet ke liye naya Code.gs.
+
 SECURITY
    Token aur admin key sirf aap ke browser mein save hoti hain. Token kisi ko na dein.
    Delivery fee abhi placeholder hai: script.js mein CONFIG.deliveryFee badlein.
