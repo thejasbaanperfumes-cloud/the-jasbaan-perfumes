@@ -20,6 +20,7 @@ module.exports = async (req, res) => {
       headers: { Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json', 'User-Agent': 'jasbaan-admin', 'Content-Type': 'application/json' },
       body: put ? JSON.stringify({ message: String(b.body && b.body.message || 'Update ' + path).slice(0, 200), content: b.body && b.body.content, ...(b.body && b.body.sha ? { sha: b.body.sha } : {}), branch }) : undefined });
     const j = await r.json().catch(() => ({}));
+        if (r.status === 401) j.message = (j.message || 'Bad credentials') + ' [Server token from ' + ['GITHUB_TOKEN', 'GH_TOKEN', 'GITHUB_PAT'].find(n => env(n)) + ': starts "' + token.slice(0, 11) + '", ' + token.length + ' characters. Sahi fine-grained token lagbhag 93 characters ka hota hai]';
     return res.status(r.status).json(j);
   } catch (e) { console.error(e.message); return res.status(500).json({ message: 'Server error: ' + e.message }); }
 };
