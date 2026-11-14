@@ -35,7 +35,7 @@ const ghServer=async(path,opt,why)=>{let r;
  try{r=await fetch('/api/github',{method:'POST',headers:{'x-admin-key':S.key||'','Content-Type':'application/json'},body:JSON.stringify({path,method:opt.method||'GET',body:opt.body?JSON.parse(opt.body):undefined})})}
  catch(e){throw Error((why||'')+' Server se bhi connect nahi hua ('+e.message+'). Admin page apni site ke address (https://...) se kholein.')}
  const j=await r.json().catch(()=>({}));
- if(j.notConfigured)throw Error((why||'')+' Vercel mein GITHUB_REPO aur GITHUB_TOKEN set karein (README ya chat mein steps hain), phir Redeploy karein.');
+ if(j.notConfigured)throw Error((why?why+' ':'')+j.message);
  if(r.status===413)throw Error('Photo bohat badi hai, 3 MB se chhoti photo upload karein.');
  if(!r.ok)throw ghErr(r,j,'repo','branch');return j};
 const gh=async(path,opt={})=>{if(!S.repo||!S.token)return ghServer(path,opt,'Settings mein GitHub repo aur token nahi hain.');
