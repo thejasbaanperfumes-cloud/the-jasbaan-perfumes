@@ -26,12 +26,20 @@ const toast=t=>{const m=$('#msg');m.textContent=t;m.style.display='block';setTim
 const STAT=['New','Confirmed','Shipped','Delivered','Cancelled'];let P=[],sha='',O=[],tab='orders';
 /* ---------- GitHub (products) ---------- */
 const b64=s=>btoa(unescape(encodeURIComponent(s))),unb64=s=>decodeURIComponent(escape(atob(s.replace(/\n/g,''))));
-const gh=async(path,opt={})=>{if(!S.repo||!S.token)throw Error('Settings mein GitHub repo aur token daalein');
- const repo=S.repo.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//i,'').replace(/\.git$/,'').replace(/^\/+|\/+$/g,''),br=(S.branch||'main').trim()||'main';let r;
+const ghErr=(r,j,repo,br)=>Error((j.message||'Error '+r.status)+(r.status===401?' | Token galat ya expire hai, naya token banayein.':r.status===404?' | Repo ka naam "'+repo+'" galat hai, ya branch "'+br+'" galat hai, ya token ko is repo ki Contents (Read and write) permission nahi mili.':r.status===403?' | Token ko Contents: Read and write permission chahiye.':''));
+const ghDirect=async(path,opt)=>{const repo=S.repo.trim().replace(/^(https?:\/\/)?(www\.)?github\.com\//i,'').replace(/\.git$/,'').replace(/^\/+|\/+$/g,''),br=(S.branch||'main').trim()||'main';let r;
  try{r=await fetch(`https://api.github.com/repos/${repo}/contents/${path}`+(opt.method?'':`?ref=${encodeURIComponent(br)}`),{...opt,headers:{Authorization:'Bearer '+S.token.trim(),Accept:'application/vnd.github+json'}})}
- catch(e){throw Error('Browser GitHub (api.github.com) tak pahunch nahi paya ('+e.message+'). Internet, VPN ya ad-blocker check karein. Naye tab mein https://api.github.com khol kar dekhein ke khulta hai ya nahi.')}
+ catch(e){const x=Error('Browser GitHub (api.github.com) tak pahunch nahi paya ('+e.message+').');x.net=true;throw x}
+ const j=await r.json().catch(()=>({}));if(!r.ok)throw ghErr(r,j,repo,br);return j};
+const ghServer=async(path,opt,why)=>{let r;
+ try{r=await fetch('/api/github',{method:'POST',headers:{'x-admin-key':S.key||'','Content-Type':'application/json'},body:JSON.stringify({path,method:opt.method||'GET',body:opt.body?JSON.parse(opt.body):undefined})})}
+ catch(e){throw Error((why||'')+' Server se bhi connect nahi hua ('+e.message+'). Admin page apni site ke address (https://...) se kholein.')}
  const j=await r.json().catch(()=>({}));
- if(!r.ok)throw Error((j.message||'Error '+r.status)+(r.status===401?' | Token galat ya expire hai, naya token banayein.':r.status===404?' | Repo ka naam "'+repo+'" galat hai, ya branch "'+br+'" galat hai, ya token ko is repo ki Contents (Read and write) permission nahi mili.':r.status===403?' | Token ko Contents: Read and write permission chahiye.':''));return j};
+ if(j.notConfigured)throw Error((why||'')+' Vercel mein GITHUB_REPO aur GITHUB_TOKEN set karein (README ya chat mein steps hain), phir Redeploy karein.');
+ if(r.status===413)throw Error('Photo bohat badi hai, 3 MB se chhoti photo upload karein.');
+ if(!r.ok)throw ghErr(r,j,'repo','branch');return j};
+const gh=async(path,opt={})=>{if(!S.repo||!S.token)return ghServer(path,opt,'Settings mein GitHub repo aur token nahi hain.');
+ try{return await ghDirect(path,opt)}catch(e){if(!e.net)throw e;return ghServer(path,opt,e.message)}};
 const loadP=async()=>{const r=await gh('products.js'),t=unb64(r.content);sha=r.sha;P=JSON.parse(t.slice(t.indexOf('['),t.lastIndexOf(']')+1))};
 const saveP=async msg=>{const r=await gh('products.js',{method:'PUT',body:JSON.stringify({message:msg,branch:(S.branch||'main').trim()||'main',sha,
  content:b64('/* Product data. Edit through admin.html (or by hand: keep valid JSON). */\nconst PRODUCTS = '+JSON.stringify(P,null,1)+';\n')})});sha=r.content.sha;toast('Saved. Site 1-2 minute mein update ho jayegi.')};
