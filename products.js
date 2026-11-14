@@ -1,6 +1,27 @@
 /* Product data. Edit through admin.html (or by hand: keep valid JSON). */
 const PRODUCTS = [
  {
+  "id": "silver-oud",
+  "name": "Silver Oud",
+  "cat": "Oud",
+  "gender": "Unisex",
+  "price": 1699,
+  "sale": null,
+  "notes": "",
+  "best": true,
+  "img": "images/silver-oud.jpg",
+  "desc": "Rich oud character with refined elegance. A scent that leaves a legacy. 50 ml eau de parfum.",
+  "tagline": "A scent that leaves a legacy.",
+  "points": [
+   "Rich oud character",
+   "Refined elegance",
+   "Unforgettable presence"
+  ],
+  "lasting": "",
+  "season": "",
+  "occasion": ""
+ },
+ {
   "id": "tester-set",
   "name": "Tester Collection",
   "cat": "Bundle",
@@ -26,27 +47,6 @@ const PRODUCTS = [
   "season": "",
   "occasion": "",
   "long": "The Jasbaan Tester Collection is a limited-edition set of five 5 ml perfume testers: Nayel, Almira, Blue Sea, Gucci Flora and Blue Lady. It is an exclusive launch bundle priced at PKR 1,299 for the whole set. Each tester is a small spray bottle with the Jasbaan label, so you can try every fragrance on your skin, find the one that feels like you, and then choose a full bottle. For the best result, spray on clean, moisturised skin at the wrists and neck, and keep the testers away from heat and direct sunlight. To order, add the set to your bag and send your order on WhatsApp, or message us on +92 371 2272628. Delivery areas, timing and charges are confirmed with you when you order, and the checkout offers Cash on Delivery."
- },
- {
-  "id": "silver-oud",
-  "name": "Silver Oud",
-  "cat": "Oud",
-  "gender": "Unisex",
-  "price": 1699,
-  "sale": null,
-  "notes": "",
-  "best": true,
-  "img": "images/silver-oud.jpg",
-  "desc": "Rich oud character with refined elegance. A scent that leaves a legacy. 50 ml eau de parfum.",
-  "tagline": "A scent that leaves a legacy.",
-  "points": [
-   "Rich oud character",
-   "Refined elegance",
-   "Unforgettable presence"
-  ],
-  "lasting": "",
-  "season": "",
-  "occasion": ""
  },
  {
   "id": "blue-sea",
