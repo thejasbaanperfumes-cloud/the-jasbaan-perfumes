@@ -16,7 +16,7 @@ dialog{background:var(--card);color:var(--ivory);border:1px solid var(--gold);bo
 .scroll{overflow-x:auto}
 .ln2{display:grid;grid-template-columns:1.3fr 1.3fr .5fr .7fr auto;gap:.4rem;margin:.3rem 0}@media(max-width:600px){.ln2{grid-template-columns:1fr 1fr}}
 </style></head><body>
-<header><b>JASBAAN ADMIN</b><button class="tab o" data-t="orders">Orders</button><button class="tab o" data-t="products">Products</button><button class="tab o" data-t="settings">Settings</button></header>
+<header><b>JASBAAN ADMIN</b><button class="tab o" data-t="orders">Orders</button><button class="tab o" data-t="products">Products</button><button class="tab o" data-t="reviews">Reviews</button><button class="tab o" data-t="settings">Settings</button></header>
 <main id="m"></main><dialog id="dlg"></dialog><div id="msg"></div>
 <script>
 const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -118,6 +118,18 @@ const newO=async()=>{
  $('#ls').onchange=e=>{if(!e.target.classList.contains('pi'))return;const r=e.target.parentNode,o=e.target.selectedOptions[0];if(o.dataset.p){r.querySelector('.pn').value=o.dataset.n;r.querySelector('.pp').value=o.dataset.p}else if(o.value==='_'){r.querySelector('.pn').value='';r.querySelector('.pp').value=''}};
  $('#nf').onsubmit=async e=>{e.preventDefault();const d=new FormData(e.target),items=[...document.querySelectorAll('#ls .ln2')].map(r=>({id:r.querySelector('.pi').value==='_'?'':r.querySelector('.pi').value,name:r.querySelector('.pn').value.trim(),qty:+r.querySelector('.pq').value||1,price:+r.querySelector('.pp').value||0})).filter(i=>i.name);
   try{if(!items.length)throw Error('Kam az kam ek item likhein');const r=await post({action:'add',order:{name:d.get('name'),phone:d.get('phone'),addr:d.get('addr'),city:d.get('city'),items,fee:d.get('fee'),pay:d.get('pay'),paid:d.get('paid'),source:'Manual: '+d.get('src'),note:d.get('note')}});$('#dlg').close();await viewO();toast('Order '+r.id+' ban gaya')}catch(er){toast(er.message)}}};
+/* ---------- Reviews ---------- */
+let RV=[],rF='';
+const safeU=u=>/^(\/api\/review-photo\?|https:\/\/lh3\.googleusercontent\.com\/)/.test(String(u))?String(u):'';
+const viewR=async()=>{$('#m').innerHTML='<p>Loading...</p>';try{RV=(await api('&action=rlist')).reviews||[]}catch(e){return $('#m').innerHTML='<p>'+esc(e.message)+'</p>'}drawR()};
+const drawR=(f=rF)=>{rF=f;const L=RV.filter(r=>!f||r.status===f),cnt=s=>RV.filter(r=>r.status===s).length;
+ $('#m').innerHTML=`<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1rem"><select id="rfl" style="width:auto"><option value="">All reviews (${RV.length})</option>${['Pending','Approved','Hidden'].map(s=>`<option value="${s}" ${f===s?'selected':''}>${s} (${cnt(s)})</option>`).join('')}</select><button class="o" onclick="viewR()">Refresh</button></div>
+ <p><small>Naye reviews "Pending" hote hain. Approve karne par hi website par nazar aate hain.</small></p>`+(L.map(r=>`<div class="st" style="text-align:left;margin-bottom:.8rem"><b>${'★'.repeat(Math.max(0,Math.min(5,+r.rating||0)))}${'☆'.repeat(5-Math.max(0,Math.min(5,+r.rating||0)))}</b> <b>${esc(r.name)}</b> <span class=badge>${esc(r.status)}</span><br><small>${esc(r.city)}${r.product?' | '+esc(r.product):''} | ${dt(r.date)}</small><p>${esc(r.text)}</p>`
+  +((r.photos||[]).map(safeU).filter(Boolean).map(u=>`<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="" style="width:80px;height:80px;object-fit:cover;margin:0 .4rem .4rem 0;border:1px solid var(--gold)"></a>`).join(''))
+  +`<p style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0 0">${r.status!=='Approved'?`<button data-ra="Approved" data-id="${esc(r.id)}">Approve</button>`:''}${r.status!=='Hidden'?`<button class="o" data-ra="Hidden" data-id="${esc(r.id)}">Hide</button>`:''}<button class="r" data-ra="del" data-id="${esc(r.id)}">Delete</button></p></div>`).join('')||'<p>Koi review nahi.</p>');
+ $('#rfl').onchange=e=>drawR(e.target.value);document.querySelectorAll('[data-ra]').forEach(b=>b.onclick=()=>rAct(b.dataset.id,b.dataset.ra))};
+const rAct=async(id,a)=>{try{if(a==='del'){if(!confirm('Ye review (photos ke saath) hamesha ke liye delete karein?'))return;await api('&action=rdel&id='+encodeURIComponent(id));RV=RV.filter(r=>r.id!==id);toast('Review deleted')}
+ else{await api('&action=rset&id='+encodeURIComponent(id)+'&status='+a);RV.find(r=>r.id===id).status=a;toast(a==='Approved'?'Approved: ab website par dikhega':'Hidden')}drawR()}catch(e){toast(e.message)}};
 const printAll=()=>{const L=O.filter(o=>o.status==='New'||o.status==='Confirmed');L.length?pr(L,'lbl'):toast('Koi pending order nahi')};
 const pr=(L,k)=>{const w=open('','_blank');if(!w)return toast('Popup allow karein');
  const css='body{font:14px/1.45 Arial,sans-serif;color:#000;margin:0}.p{padding:18px;page-break-after:always}table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid #999;padding:5px;text-align:left}.r{text-align:right}h1,h2{margin:0 0 6px}.l{border:2px solid #000;margin:8px;padding:12px;width:100mm;min-height:140mm;page-break-after:always}.big{font-size:20px;font-weight:700}.cod{border:2px dashed #000;padding:8px;margin:10px 0;font-size:18px;text-align:center}@page{margin:6mm}';
@@ -136,6 +148,6 @@ const siteS=async()=>{const el=document.createElement('div');el.innerHTML='<h3 s
  el.innerHTML='<h3 style="color:var(--gold);margin-top:2rem">Website settings (GitHub par save hoti hain)</h3><p><small>Jis method ka number/detail khali ho woh checkout par nahi aata.</small></p><form id="wf">'+f.map(([k,l,v])=>`<label>${l}</label><input name="${k}" value="${esc(v||'')}">`).join('')+'<p><button>Save to website</button></p></form>';
  $('#wf').onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),n={orderUrl:d.orderUrl.trim(),deliveryFee:+d.deliveryFee||0,whatsapp:d.whatsapp.trim(),payments:[{label:'Cash on Delivery',type:'cod'},{label:'Easypaisa',type:'easypaisa',account:d.ep.trim(),title:d.ept.trim()},{label:'JazzCash',type:'jazzcash',account:d.jc.trim(),title:d.jct.trim()},{label:'Bank Transfer',type:'bank',details:d.bk.trim()}]};
   try{const r=await gh('store-config.js',{method:'PUT',body:JSON.stringify({message:'Update store settings',branch:(S.branch||'main').trim()||'main',...(ss?{sha:ss}:{}),content:b64('/* Store settings. Edit through admin.html > Settings > Website settings. */\nwindow.STORE = '+JSON.stringify(n,null,1)+';\n')})});ss=r.content.sha;S.orderUrl=n.orderUrl||S.orderUrl;persist();toast('Saved. Site 1-2 minute mein update ho jayegi.')}catch(er){toast(er.message)}}};
-const go=t=>{tab=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));({orders:viewO,products:viewP,settings:viewS})[t]()};
+const go=t=>{tab=t;document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));({orders:viewO,products:viewP,reviews:viewR,settings:viewS})[t]()};
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>go(b.dataset.t));go(S.key?'orders':'settings');
 </script></body></html>

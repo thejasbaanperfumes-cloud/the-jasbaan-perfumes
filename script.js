@@ -231,6 +231,7 @@ function showTrack(o, phone, msg) {
   const rows = (o.items || []).map(i => `<p><span>${tEsc(i.name)} × ${tEsc(i.qty)}</span><span>${fmt(i.price * i.qty)}</span></p>`).join('');
   const pay = o.paid === 'Paid' ? 'Paid' : o.paid === 'Pending' ? 'Payment is being verified' : o.pay === 'Cash on Delivery' ? 'Pay on delivery' : 'Payment not received yet';
   const after = o.canCancel ? '<button class="btn ghost" type="button" id="tc">CANCEL THIS ORDER</button>'
+    : o.status === 'Delivered' ? '<button class="btn" type="button" id="trv">WRITE A REVIEW</button>'
     : o.status === 'Cancelled' ? '<p class="fine">This order is cancelled.</p>'
     : `<p class="fine">This order can no longer be cancelled here. To change or cancel it, please <a href="${tEsc(wa)}" target="_blank" rel="noopener noreferrer" style="color:var(--gold)">contact us on WhatsApp</a>.</p>`;
   modal(`<div class="f"><h2>Order ${tEsc(o.id)}</h2>${msg ? `<p style="color:var(--gold);font-weight:600">${tEsc(msg)}</p>` : ''}
@@ -239,6 +240,7 @@ function showTrack(o, phone, msg) {
     <div class="sum">${steps}</div>
     <div class="sum">${rows}<p><span>Delivery fee</span><span>${fmt(o.fee || 0)}</span></p><p><b>Total (${tEsc(o.pay)})</b><b>${fmt(o.total || 0)}</b></p></div>
     <p class="fine">${tEsc(pay)}</p><div id="tact">${after}</div></div>`);
+  if ($('#trv')) $('#trv').onclick = () => openReview();
   const tc = $('#tc'); if (!tc) return;
   tc.onclick = () => {
     $('#tact').innerHTML = `<label>Reason for cancelling (optional)<select id="trs"><option value="">Choose a reason</option><option>Changed my mind</option><option>Ordered by mistake</option><option>Found a better price</option><option>Delivery is too slow</option><option>Other</option></select></label>
@@ -253,10 +255,80 @@ function showTrack(o, phone, msg) {
     };
   };
 }
-document.addEventListener('click', e => { if (e.target.closest('[data-track]')) { e.preventDefault(); openTrack(); } });
+document.addEventListener('click', e => { if (e.target.closest('[data-track]')) { e.preventDefault(); if ($('#cart').classList.contains('on')) openCart(false); openTrack(); } });
 const trackHash = () => { const m = location.hash.match(/^#track(?:-(.+))?$/i); if (m) openTrack(m[1] ? decodeURIComponent(m[1]).slice(0, 40) : ''); };
 addEventListener('hashchange', trackHash); trackHash();
 $('#modal').addEventListener('close', () => { if (/^#track/i.test(location.hash)) history.replaceState(null, '', location.pathname + location.search); });
+
+/* Customer reviews: show approved ones, let customers write one (with photos) */
+const rvUrl = u => /^(\/api\/review-photo\?|https:\/\/lh3\.googleusercontent\.com\/)/.test(String(u)) ? String(u) : '';
+const rvApi = act => { const same = CONFIG.orderUrl.charAt(0) === '/'; return same ? CONFIG.orderUrl.replace(/\/order$/, '/' + act) : CONFIG.orderUrl + (CONFIG.orderUrl.indexOf('?') < 0 ? '?' : '&') + 'action=' + act; };
+function buildReviews(list) {
+  const box = $('.revs'), dots = $('.dots'); if (!box || !dots) return;
+  $$('.rev').forEach(n => n.remove()); const note = $('.revs .note'); if (note) note.remove();
+  list.forEach(r => {
+    const d = document.createElement('div'); d.className = 'rev';
+    const n = Math.max(1, Math.min(5, parseInt(r.rating, 10) || 5)), ph = (r.photos || []).map(rvUrl).filter(Boolean);
+    d.innerHTML = `<div class="rst" role="img" aria-label="${n} out of 5 stars">${'★'.repeat(n)}${'☆'.repeat(5 - n)}</div><blockquote>“${tEsc(r.text)}”</blockquote>`
+      + (ph.length ? `<div class="rph">${ph.map(u => `<img src="${tEsc(u)}" alt="Photo from ${tEsc(r.name)}" loading="lazy" data-rph>`).join('')}</div>` : '')
+      + `<small>${tEsc(r.name)}${r.city ? ', ' + tEsc(r.city) : ''}${r.product ? ' · ' + tEsc(r.product) : ''}</small>`;
+    box.insertBefore(d, dots);
+  });
+  R = $$('.rev'); show(0);
+}
+async function loadReviews() {
+  if (!CONFIG.orderUrl) return;
+  try { const j = await (await fetch(rvApi('reviews'))).json(); if (j && j.ok && j.reviews && j.reviews.length) buildReviews(j.reviews); } catch (e) {}
+}
+const shrinkPhoto = file => new Promise((ok, no) => {
+  const url = URL.createObjectURL(file), img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, 900 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.width * k)); c.height = Math.max(1, Math.round(img.height * k));
+    const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+    let q = .78, d = c.toDataURL('image/jpeg', q); while (d.length > 230000 && q > .3) { q -= .08; d = c.toDataURL('image/jpeg', q); }
+    d.length > 255000 ? no(new Error('Photo is too large. Please choose a smaller photo.')) : ok(d);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); no(new Error('Photo could not be read. Please choose a JPG or PNG photo.')); };
+  img.src = url;
+});
+function openReview() {
+  let rating = 0;
+  modal(`<form class="f" id="rf"><h2>Write a review</h2><p class="fine">Tell us about your experience. Your review will appear on the website after we approve it.</p>
+    <label>Your name<input name="name" required maxlength="60" autocomplete="name"></label>
+    <label>City (optional)<input name="city" maxlength="60"></label>
+    <label>Product (optional)<select name="product"><option value="">Choose a fragrance</option>${PRODUCTS.map(p => `<option>${tEsc(p.name)}</option>`).join('')}</select></label>
+    <div id="rstars" role="group" aria-label="Rating">${[1, 2, 3, 4, 5].map(i => `<button type="button" data-s="${i}" aria-label="${i} star${i > 1 ? 's' : ''}" aria-pressed="false">★</button>`).join('')}</div>
+    <label>Your review<textarea name="text" required minlength="10" maxlength="600" rows="4" placeholder="How does it smell? How long does it last?"></textarea></label>
+    <label>Add photos (optional, up to 3)<input type="file" name="photos" accept="image/*" multiple></label><div class="rph" id="rpv"></div>
+    <p id="rmsg" role="alert" style="color:#b3261e;font-weight:600;font-size:.9rem;margin:0"></p>
+    <button class="btn" type="submit">SEND REVIEW</button></form>`);
+  const msg = t => { $('#rmsg').textContent = t; };
+  $('#rstars').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; rating = +b.dataset.s; $$('#rstars button').forEach(x => { const on = +x.dataset.s <= rating; x.classList.toggle('on', on); x.setAttribute('aria-pressed', +x.dataset.s === rating); }); };
+  $('#rf [name=photos]').onchange = e => { const f = [...e.target.files].slice(0, 3); $('#rpv').innerHTML = f.map(x => `<img src="${URL.createObjectURL(x)}" alt="">`).join(''); if (e.target.files.length > 3) msg('Only the first 3 photos will be sent.'); else msg(''); };
+  $('#rf').onsubmit = async e => {
+    e.preventDefault(); const d = new FormData(e.target), btn = e.target.querySelector('button[type=submit]'); msg('');
+    if (!rating) return msg('Please tap a star to rate.');
+    if (!CONFIG.orderUrl) return msg('Reviews are not set up yet.');
+    btn.disabled = true; btn.textContent = 'SENDING...';
+    try {
+      const photos = await Promise.all([...e.target.photos.files].slice(0, 3).map(shrinkPhoto));
+      const body = JSON.stringify({ action: 'review', name: d.get('name'), city: d.get('city'), product: d.get('product'), rating, text: d.get('text'), photos });
+      const same = CONFIG.orderUrl.charAt(0) === '/', ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 45000);
+      try {
+        const r = await fetch(same ? rvApi('review') : CONFIG.orderUrl, same ? { method: 'POST', signal: ctl.signal, headers: { 'Content-Type': 'application/json' }, body }
+          : { method: 'POST', mode: 'no-cors', signal: ctl.signal, headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body });
+        if (same) { const j = await r.json().catch(() => ({})); if (!j.ok) throw new Error(j.error || 'Could not send your review. Please try again.'); }
+      } finally { clearTimeout(tm); }
+      modal(`<div class="f"><h2>Thank you!</h2><p>Your review has been received. It will appear on the website after we approve it.</p><button class="btn" type="button" id="rdn">CLOSE</button></div>`);
+      $('#rdn').onclick = () => $('#modal').close();
+    } catch (er) { msg(er.name === 'AbortError' ? 'The request timed out. Please try again.' : er.message); btn.disabled = false; btn.textContent = 'SEND REVIEW'; }
+  };
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('#wrv')) return openReview();
+  const im = e.target.closest('[data-rph]'); if (im) modal(`<div class="f"><img src="${tEsc(im.src)}" alt="${tEsc(im.alt)}" style="width:100%;height:auto;max-height:75vh;object-fit:contain"></div>`);
+});
+loadReviews();
 
 /* Clicks (one handler for all buttons) */
 document.addEventListener('click', e => {
@@ -297,7 +369,7 @@ $('#nl').onsubmit = e => {
 };
 
 /* Testimonial carousel */
-const R = $$('.rev'); let ri = 0;
+let R = $$('.rev'), ri = 0;
 const show = i => { ri = (i + R.length) % R.length; R.forEach((r, k) => r.classList.toggle('on', k === ri)); };
 $('#rp').onclick = () => show(ri - 1); $('#rn').onclick = () => show(ri + 1);
 if (!matchMedia('(prefers-reduced-motion:reduce)').matches) setInterval(() => show(ri + 1), 7000);

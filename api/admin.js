@@ -1,4 +1,4 @@
-// GET  /api/admin?action=list|status|paid  (header x-admin-key must equal env ADMIN_KEY)
+// GET  /api/admin?action=list|status|paid|rlist|rset|rdel  (header x-admin-key must equal env ADMIN_KEY)
 // POST /api/admin  JSON {action:'update'|'delete'|'add', ...}  (same header)
 const crypto = require('crypto');
 const { redis } = require('./_redis');
@@ -13,6 +13,23 @@ module.exports = async (req, res) => {
   try { if (post) b = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {}); } catch (e) { return res.status(400).json({ ok: false, error: 'Bad request' }); }
   const q = post ? b : (req.query || {});
   try {
+    if (q.action === 'reviews') {                                 // all reviews (no photos) for moderation
+      const [ids] = await redis([['LRANGE', 'reviews', '0', '299']]);
+      const rows = ids.length ? (await redis([['MGET', ...ids.map(i => 'review:' + i)]]))[0] : [];
+      return res.status(200).json({ ok: true, reviews: rows.filter(Boolean).map(r => JSON.parse(r)) });
+    }
+    if (q.action === 'reviewphoto') {
+      const [p] = await redis([['GET', 'rphoto:' + String(q.id || '')]]);
+      return p ? res.status(200).json({ ok: true, photo: 'data:image/jpeg;base64,' + p }) : res.status(404).json({ ok: false, error: 'No photo' });
+    }
+    if (q.action === 'revstatus' || q.action === 'revdelete') {
+      const id = String(q.id || ''), [raw] = await redis([['GET', 'review:' + id]]);
+      if (!raw) return res.status(404).json({ ok: false, error: 'Review not found' });
+      if (q.action === 'revdelete') { await redis([['DEL', 'review:' + id], ['DEL', 'rphoto:' + id], ['LREM', 'reviews', '0', id]]); return res.status(200).json({ ok: true }); }
+      if (!['pending', 'approved', 'rejected'].includes(q.status)) return res.status(400).json({ ok: false, error: 'Bad value' });
+      const r = JSON.parse(raw); r.status = q.status; await redis([['SET', 'review:' + id, JSON.stringify(r)]]);
+      return res.status(200).json({ ok: true });
+    }
     if (q.action === 'add') {                                     // manual order (WhatsApp / Instagram / phone)
       const x = b.order || {};
       const items = (Array.isArray(x.items) ? x.items : []).slice(0, 40).map(i => ({ id: s(i.id, 60), name: s(i.name, 80),
@@ -26,6 +43,20 @@ module.exports = async (req, res) => {
       if (!o.name || !/^[0-9+ ]{10,15}$/.test(o.phone) || !o.addr || !o.city || !items.length) return res.status(400).json({ ok: false, error: 'Name, phone (10-15 digits), address, city aur kam az kam ek item zaroori hai' });
       await redis([['SET', 'order:' + o.id, JSON.stringify(o)], ['LPUSH', 'orders', o.id]]);
       return res.status(200).json({ ok: true, id: o.id });
+    }
+    if (q.action === 'rlist') {                                   // all customer reviews (Pending / Approved / Hidden)
+      const [ids] = await redis([['LRANGE', 'reviews', '0', '199']]);
+      const rows = ids.length ? (await redis([['MGET', ...ids.map(i => 'review:' + i)]]))[0] : [];
+      return res.status(200).json({ ok: true, reviews: rows.filter(Boolean).map(r => JSON.parse(r)).map(r => ({ ...r, photos: Array.from({ length: r.photos || 0 }, (_, i) => '/api/review-photo?id=' + r.id + '&n=' + i) })) });
+    }
+    if (q.action === 'rset' || q.action === 'rdel') {
+      const id = String(q.id || ''); if (!/^[a-f0-9]{16}$/.test(id)) return res.status(400).json({ ok: false, error: 'Bad id' });
+      const [raw] = await redis([['GET', 'review:' + id]]);
+      if (!raw) return res.status(404).json({ ok: false, error: 'Review not found' });
+      if (q.action === 'rdel') { const r = JSON.parse(raw); await redis([['DEL', 'review:' + id], ...Array.from({ length: r.photos || 0 }, (_, i) => ['DEL', 'rphoto:' + id + ':' + i]), ['LREM', 'reviews', '0', id]]); return res.status(200).json({ ok: true }); }
+      if (!['Pending', 'Approved', 'Hidden'].includes(q.status)) return res.status(400).json({ ok: false, error: 'Bad value' });
+      const r = JSON.parse(raw); r.status = q.status; await redis([['SET', 'review:' + id, JSON.stringify(r)]]);
+      return res.status(200).json({ ok: true });
     }
     if (q.action === 'status' || q.action === 'paid' || q.action === 'update' || q.action === 'delete') {
       const id = String(q.id || ''), [raw] = await redis([['GET', 'order:' + id]]);

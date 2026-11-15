@@ -91,6 +91,10 @@ h2{font-size:clamp(1.9rem,4vw,3rem);margin-bottom:.8rem}
 /* Reviews, newsletter, FAQ, contact */
 .revs{max-width:760px;text-align:center}
 .rev{display:none}.rev.on{display:block}
+.rst{color:var(--gold);letter-spacing:.25em;font-size:1.1rem}
+.rph{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin:.4rem 0}.rph img{width:84px;height:84px;object-fit:cover;border:1px solid var(--gold);border-radius:2px;cursor:zoom-in}
+#wrv{margin-top:1.4rem}
+#rstars{display:flex;gap:.3rem}#rstars button{background:none;border:0;font-size:1.9rem;line-height:1;color:var(--beige);cursor:pointer;padding:.1rem .2rem}#rstars button.on{color:var(--gold)}
 blockquote{font:italic clamp(1.3rem,3vw,1.9rem)/1.3 var(--serif);margin:1rem 0}.rev small{color:var(--gold)}
 .dots{display:flex;justify-content:center;gap:.6rem;margin-top:1.4rem}
 .nl{display:flex;gap:.6rem;max-width:520px;flex-wrap:wrap}.nl input{flex:1 1 220px;width:auto}
@@ -120,6 +124,7 @@ footer .brand{color:var(--ivory)}.copy{margin:2rem 0 0;padding-top:1.2rem;border
 .q{display:flex;align-items:center;gap:.6rem;margin:.3rem 0}.q button{width:1.9rem;height:1.9rem;background:none;border:1px solid var(--line);border-radius:50%}
 .rmv{background:none;border:0;color:var(--beige);text-decoration:underline;font-size:.8rem;padding:0}
 .tot{display:flex;justify-content:space-between;font-size:1.15rem;margin-bottom:1rem}
+#cart #chk,#cart #trkbtn{width:100%}#trkbtn{margin-top:.6rem}
 dialog{background:var(--ink2);color:var(--ivory);border:1px solid var(--gold);padding:0;width:min(780px,94vw);max-height:92vh;overflow:auto}
 dialog::backdrop{background:rgba(42,33,68,.6)}
 .mi{display:grid;grid-template-columns:1fr 1fr}.mi img{width:100%;height:100%;object-fit:cover}.mi>div{padding:2rem}
@@ -432,6 +437,7 @@ mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent),linea
    <div class="rev"><blockquote>“A placeholder review about the packaging and presentation.”</blockquote><small>Sample customer</small></div>
    <div class="rev"><blockquote>“A placeholder review about the service and delivery.”</blockquote><small>Sample customer</small></div>
    <div class="dots"><button class="btn ghost sm" id="rp" aria-label="Previous review">←</button><button class="btn ghost sm" id="rn" aria-label="Next review">→</button></div>
+   <p><button class="btn" id="wrv" type="button">WRITE A REVIEW</button></p>
   </div>
  </section>
 
@@ -477,7 +483,7 @@ mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent),linea
   <div class="fg">
    <div><a class="brand" href="#top"><img src="images/logo.jpg" alt=""><span>The Jasbaan Perfume</span></a><p>Wear confidence.... Wear JASBAAN</p></div>
    <div><h4>Quick links</h4><a href="#shop">Shop All</a><a href="#families">Our Collection</a><a href="#story">About Us</a></div>
-   <div><h4>Support</h4><a href="#faq">Questions</a><a href="#track" data-track>Track Order</a><a href="#contact">Contact</a><a href="mailto:thejasbaanperfumes@gmail.com">Email us</a><a href="#newsletter">Newsletter</a></div>
+   <div><h4>Support</h4><a href="#faq">Questions</a><a href="#contact">Contact</a><a href="mailto:thejasbaanperfumes@gmail.com">Email us</a><a href="#newsletter">Newsletter</a></div>
    <div><h4>Follow</h4><a href="https://www.instagram.com/the_jasbaan_perfumes" target="_blank" rel="noopener noreferrer">Instagram</a><a href="https://wa.me/923712272628" target="_blank" rel="noopener noreferrer">WhatsApp</a><a href="https://www.facebook.com/share/18ap85P8Tk/" target="_blank" rel="noopener noreferrer">Facebook</a></div>
   </div>
   <p class="copy">© 2026 The Jasbaan Perfume. All rights reserved.</p>
@@ -491,6 +497,7 @@ mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent),linea
  <div id="items"></div>
  <div class="tot"><span>Subtotal</span><b id="sub">PKR 0</b></div>
  <button class="btn" id="chk">CHECKOUT</button>
+ <button class="btn ghost" id="trkbtn" type="button" data-track>TRACK YOUR ORDER</button>
 </aside>
 <dialog id="modal" aria-label="Details"></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
